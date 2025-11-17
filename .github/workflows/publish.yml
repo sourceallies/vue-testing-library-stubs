@@ -5,7 +5,7 @@ on:
     types: [created]
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
   
 jobs:
@@ -22,14 +22,21 @@ jobs:
         registry-url: 'https://registry.npmjs.org'
         cache: 'npm'
 
-    - name: Update package.json version from release tag
-      uses: cssnr/update-version-tags-action@v1.2.0 # Use the latest version of the action
-      with:        
-        # Optional: Commit the changes back to the repository (defaults to true)
-        commit: false
-        
-        # Optional: Push the changes back to the repository (defaults to true)
-        push: false
+    - name: Extract version from tag
+      id: get_version
+      run: |
+        # Get the tag name (e.g., v1.0.1)
+        TAG_NAME="${{ github.event.release.tag_name }}"
+        # Remove 'v' prefix if present
+        VERSION="${TAG_NAME#v}"
+        echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        echo "Extracted version: ${VERSION}"
+
+    - name: Update package.json version
+      run: |
+        VERSION="${{ steps.get_version.outputs.version }}"
+        npm version ${VERSION} --no-git-tag-version
+        echo "Updated package.json to version ${VERSION}"
 
     # Ensure npm 11.5.1 or later is installed
     - name: Update npm
