@@ -38,7 +38,7 @@
   },
   "homepage": "https://github.com/sourceallies/vue-testing-library-stubs#readme",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20"
   },
   "peerDependencies": {
     "vue": ">=3.0.0"
