@@ -10,7 +10,7 @@ import {
     getExposedValidateStubWithProps,
     getTemplateComponentForExposedFunction,
     type EmittedEvent,
-} from './index';
+} from '../src/index';
 import { defineComponent } from 'vue';
 
 describe('getStub', () => {

@@ -2,6 +2,7 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    include: ['test/**/*.test.ts'],
     environment: 'happy-dom',
     globals: true,
     coverage: {
@@ -10,8 +11,7 @@ export default defineConfig({
       exclude: [
         'node_modules/',
         'dist/',
-        '**/*.test.ts',
-        '**/*.spec.ts',
+        'test/',
       ],
     },
   },
