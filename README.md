@@ -22,7 +22,7 @@ When testing Vue components, you often need to test a parent component's behavio
 ## Installation
 
 ```bash
-npm install --save-dev @sourceallies/vue-testing-library-stubs
+npm install --save-dev @sourceallies/@sourceallies/vue-testing-library-stubs
 ```
 
 ## Development
@@ -70,7 +70,7 @@ Create a simple stub component for testing:
 
 ```typescript
 import { mount } from '@vue/test-utils';
-import { getStub } from 'vue-testing-library-stubs';
+import { getStub } from '@sourceallies/vue-testing-library-stubs';
 
 const wrapper = mount(MyParentComponent, {
   global: {
@@ -88,7 +88,7 @@ expect(wrapper.text()).toContain('ChildComponent-stub');
 
 ```typescript
 import { render, screen } from '@testing-library/vue';
-import { getStub } from 'vue-testing-library-stubs';
+import { getStub } from '@sourceallies/vue-testing-library-stubs';
 
 render(MyParentComponent, {
   global: {
@@ -110,7 +110,7 @@ Test components that pass props to child components:
 
 ```typescript
 import { mount } from '@vue/test-utils';
-import { getStubWithProps } from 'vue-testing-library-stubs';
+import { getStubWithProps } from '@sourceallies/vue-testing-library-stubs';
 
 const wrapper = mount(MyParentComponent, {
   global: {
@@ -129,7 +129,7 @@ expect(wrapper.text()).toContain('count-42');
 
 ```typescript
 import { render, screen } from '@testing-library/vue';
-import { getStubWithProps } from 'vue-testing-library-stubs';
+import { getStubWithProps } from '@sourceallies/vue-testing-library-stubs';
 
 render(MyParentComponent, {
   global: {
@@ -152,7 +152,7 @@ Test components that listen to child component events:
 
 ```typescript
 import { mount } from '@vue/test-utils';
-import { getEmittingStub } from 'vue-testing-library-stubs';
+import { getEmittingStub } from '@sourceallies/vue-testing-library-stubs';
 
 const wrapper = mount(MyParentComponent, {
   global: {
@@ -176,7 +176,7 @@ expect(wrapper.emitted('save')?.[0]).toEqual([{ id: 123 }]);
 ```typescript
 import { render, screen } from '@testing-library/vue';
 import userEvent from '@testing-library/user-event';
-import { getEmittingStub } from 'vue-testing-library-stubs';
+import { getEmittingStub } from '@sourceallies/vue-testing-library-stubs';
 
 const { emitted } = render(MyParentComponent, {
   global: {
@@ -203,7 +203,7 @@ Combine props and event emission:
 
 ```typescript
 import { mount } from '@vue/test-utils';
-import { getEmittingStubWithProps } from 'vue-testing-library-stubs';
+import { getEmittingStubWithProps } from '@sourceallies/vue-testing-library-stubs';
 
 const wrapper = mount(MyParentComponent, {
   global: {
@@ -233,7 +233,7 @@ expect(wrapper.emitted('update')?.[0]).toEqual([{ newValue: 'test' }]);
 ```typescript
 import { render, screen } from '@testing-library/vue';
 import userEvent from '@testing-library/user-event';
-import { getEmittingStubWithProps } from 'vue-testing-library-stubs';
+import { getEmittingStubWithProps } from '@sourceallies/vue-testing-library-stubs';
 
 const { emitted } = render(MyParentComponent, {
   global: {
@@ -269,7 +269,7 @@ Test components with multiple event handlers:
 
 ```typescript
 import { mount } from '@vue/test-utils';
-import { getMultiEmittingStubWithProps, type EmittedEvent } from 'vue-testing-library-stubs';
+import { getMultiEmittingStubWithProps, type EmittedEvent } from '@sourceallies/vue-testing-library-stubs';
 
 const events: EmittedEvent[] = [
   { name: 'save', value: { id: 1 } },
@@ -302,7 +302,7 @@ expect(wrapper.emitted('cancel')?.[0]).toEqual([undefined]);
 ```typescript
 import { render, screen } from '@testing-library/vue';
 import userEvent from '@testing-library/user-event';
-import { getMultiEmittingStubWithProps, type EmittedEvent } from 'vue-testing-library-stubs';
+import { getMultiEmittingStubWithProps, type EmittedEvent } from '@sourceallies/vue-testing-library-stubs';
 
 const events: EmittedEvent[] = [
   { name: 'save', value: { id: 1 } },
@@ -339,7 +339,7 @@ Test parent components that call child validation methods:
 
 ```typescript
 import { mount } from '@vue/test-utils';
-import { getExposedValidateStub } from 'vue-testing-library-stubs';
+import { getExposedValidateStub } from '@sourceallies/vue-testing-library-stubs';
 
 const wrapper = mount(MyFormComponent, {
   global: {
@@ -357,7 +357,7 @@ expect(wrapper.text()).toContain('InputComponent-stub-validated-true');
 
 ```typescript
 import { render, screen } from '@testing-library/vue';
-import { getExposedValidateStub } from 'vue-testing-library-stubs';
+import { getExposedValidateStub } from '@sourceallies/vue-testing-library-stubs';
 
 render(MyFormComponent, {
   global: {
@@ -379,7 +379,7 @@ Test components that use child component's exposed functions:
 
 ```typescript
 import { mount } from '@vue/test-utils';
-import { getTemplateComponentForExposedFunction } from 'vue-testing-library-stubs';
+import { getTemplateComponentForExposedFunction } from '@sourceallies/vue-testing-library-stubs';
 
 const props = { value: 'test', enabled: true };
 
@@ -402,7 +402,7 @@ await wrapper.find('button').trigger('click');
 ```typescript
 import { render, screen } from '@testing-library/vue';
 import userEvent from '@testing-library/user-event';
-import { getTemplateComponentForExposedFunction } from 'vue-testing-library-stubs';
+import { getTemplateComponentForExposedFunction } from '@sourceallies/vue-testing-library-stubs';
 
 const props = { value: 'test', enabled: true };
 
