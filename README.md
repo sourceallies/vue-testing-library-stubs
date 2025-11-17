@@ -2,6 +2,23 @@
 
 Contains stubbing functions for Vue components to unit test components without requiring the full component to be loaded.
 
+## Why Use This Library?
+
+When testing Vue components, you often need to test a parent component's behavior without rendering all of its child components. This library provides pre-built stub components that:
+
+- **Simplify Component Isolation**: Test parent components without worrying about child component complexity or dependencies
+- **Verify Props Passing**: Automatically display props in a testable format (e.g., `propName-value`)
+- **Test Event Handling**: Create stubs that emit events with specific payloads, allowing you to verify parent components handle events correctly
+- **Reduce Test Complexity**: Avoid importing and configuring numerous child components in your tests
+- **Support Multiple Testing Libraries**: Works seamlessly with both `@vue/test-utils` and `@testing-library/vue`
+
+### Common Use Cases
+
+- Testing that a parent component passes the correct props to child components
+- Verifying that a parent component correctly handles events emitted by children
+- Testing form validation flows where child components expose validation methods
+- Isolating unit tests from complex or slow-to-render child components
+
 ## Installation
 
 ```bash
