@@ -22,6 +22,21 @@ jobs:
         registry-url: 'https://registry.npmjs.org'
         cache: 'npm'
 
+    - name: Update package.json version from release tag
+      uses: cssnr/update-version-tags-action@v1.2.0 # Use the latest version of the action
+      with:
+        # Optional: Specify the file containing the version (defaults to package.json)
+        # file: 'path/to/your/package.json' 
+        
+        # Optional: Specify the field to update (defaults to 'version')
+        # field: 'myCustomVersionField' 
+        
+        # Optional: Commit the changes back to the repository (defaults to true)
+        commit: false
+        
+        # Optional: Push the changes back to the repository (defaults to true)
+        push: false
+
     # Ensure npm 11.5.1 or later is installed
     - name: Update npm
       run: npm install -g npm@latest
