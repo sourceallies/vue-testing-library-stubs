@@ -22,7 +22,7 @@ When testing Vue components, you often need to test a parent component's behavio
 ## Installation
 
 ```bash
-npm install --save-dev @sourceallies/@sourceallies/vue-testing-library-stubs
+npm install --save-dev @sourceallies/vue-testing-library-stubs
 ```
 
 ## Development
@@ -46,6 +46,32 @@ Build the TypeScript source to JavaScript:
 
 ```bash
 npm run build
+```
+
+### Local testing of stub functions using another project
+
+Ensure package is not already installed in the project testing the changes.
+
+```bash
+npm uninstall @sourceallies/vue-testing-library-stubs
+```
+
+Ensure Vue Testing Library Stubs project is using the same node version as the project testing the changes.
+
+```bash
+node -v
+```
+
+Create a symlink for the project testing the changes to connect to.
+
+```bash
+npm link
+```
+
+In project testing the changes link the package
+
+```bash
+npm link @sourceallies/vue-testing-library-stubs
 ```
 
 The compiled output will be in the `dist/` directory.
