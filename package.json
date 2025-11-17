@@ -24,7 +24,7 @@
   "author": "Source Allies",
   "license": "MIT",
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=18.0.0"
   },
   "peerDependencies": {
     "vue": ">=3.0.0"
