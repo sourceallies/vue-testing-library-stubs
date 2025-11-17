@@ -1,0 +1,41 @@
+{
+  "name": "vue-testing-library-stubs",
+  "version": "1.0.0",
+  "description": "Contains stubbing functions for Vue components to unit test components without requiring the full component to be loaded.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "vue",
+    "testing",
+    "library",
+    "stub"
+  ],
+  "author": "Source Allies",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "peerDependencies": {
+    "vue": ">=3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@vitest/ui": "^4.0.9",
+    "@vue/test-utils": "^2.4.6",
+    "happy-dom": "^20.0.10",
+    "jsdom": "^27.2.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.9"
+  }
+}
