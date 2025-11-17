@@ -29,6 +29,14 @@
   ],
   "author": "Source Allies",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sourceallies/vue-testing-library-stubs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sourceallies/vue-testing-library-stubs/issues"
+  },
+  "homepage": "https://github.com/sourceallies/vue-testing-library-stubs#readme",
   "engines": {
     "node": ">=18.0.0"
   },
