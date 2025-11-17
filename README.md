@@ -14,7 +14,7 @@ This project is written in TypeScript.
 
 ### Prerequisites
 
-- Node.js >= 22.12.0
+- Node.js >= 18.0.0
 - npm
 
 ### Setup
