@@ -22,7 +22,7 @@ When testing Vue components, you often need to test a parent component's behavio
 ## Installation
 
 ```bash
-npm install --save-dev vue-testing-library-stubs
+npm install --save-dev @sourceallies/vue-testing-library-stubs
 ```
 
 ## Development
