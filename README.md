@@ -425,6 +425,203 @@ const button = screen.getByRole('button', { name: 'reset' });
 await userEvent.click(button);
 ```
 
+## API Reference
+
+### `getStub(componentName: string)`
+
+Creates a basic stub component with no props or events.
+
+**Parameters:**
+- `componentName` (string): The name of the component to stub
+
+**Returns:** An object with a single key (the component name) containing the stub configuration
+
+**Example:**
+```typescript
+const stub = getStub('MyComponent');
+// Renders: <div>MyComponent-stub</div>
+```
+
+---
+
+### `getStubWithProps(componentName: string, ...props: (string | object)[])`
+
+Creates a stub component that displays its props in a testable format.
+
+**Parameters:**
+- `componentName` (string): The name of the component to stub
+- `...props` (string | object): The prop names to accept and display
+
+**Returns:** An object with a single key (the component name) containing the stub configuration
+
+**Features:**
+- Automatically converts hyphenated prop names to camelCase
+- Displays props as `propName-value` in the rendered output
+- Handles object props by JSON stringifying them
+- Shows function names for array of functions (useful for validation rules)
+
+**Example:**
+```typescript
+const stub = getStubWithProps('MyComponent', 'title', 'count', 'is-active');
+// Renders props as: title-Hello, count-42, isActive-true
+```
+
+---
+
+### `getEmittingStub(componentName: string, emittedEvent: string, ...emittedValues: any[])`
+
+Creates a stub component that emits a single event when a button is clicked.
+
+**Parameters:**
+- `componentName` (string): The name of the component to stub
+- `emittedEvent` (string): The name of the event to emit
+- `...emittedValues` (any[]): The values to emit with the event
+
+**Returns:** An object with a single key (the component name) containing the stub configuration
+
+**Features:**
+- Creates a button with the event name as its label
+- Emits the specified event with the provided values when clicked
+- Includes `validate()`, `reset()`, and `resetValidation()` methods that return valid results
+
+**Example:**
+```typescript
+const stub = getEmittingStub('MyComponent', 'save', { id: 123 });
+// Button click emits: 'save' event with { id: 123 }
+```
+
+---
+
+### `getEmittingStubWithProps(componentName: string, emittedEvent: string, emittedValues: any[], ...props: (string | object)[])`
+
+Creates a stub component that combines props display and event emission.
+
+**Parameters:**
+- `componentName` (string): The name of the component to stub
+- `emittedEvent` (string): The name of the event to emit
+- `emittedValues` (any[]): Array of values to emit with the event
+- `...props` (string | object): The prop names to accept and display
+
+**Returns:** An object with a single key (the component name) containing the stub configuration
+
+**Features:**
+- Combines functionality of `getStubWithProps` and `getEmittingStub`
+- Displays props in testable format
+- Emits events with specified values
+- Includes validation methods
+
+**Example:**
+```typescript
+const stub = getEmittingStubWithProps('MyComponent', 'update', [{ newValue: 'test' }], 'title', 'isActive');
+```
+
+---
+
+### `getMultiEmittingStubWithProps(componentName: string, events: EmittedEvent[], ...props: (string | object)[])`
+
+Creates a stub component that can emit multiple different events.
+
+**Parameters:**
+- `componentName` (string): The name of the component to stub
+- `events` (EmittedEvent[]): Array of event configurations with `name` and optional `value`
+- `...props` (string | object): The prop names to accept and display
+
+**Type Definitions:**
+```typescript
+type EmittedEvent = {
+  name: string;
+  value?: any;
+};
+```
+
+**Returns:** An object with a single key (the component name) containing the stub configuration
+
+**Features:**
+- Creates a separate button for each event
+- Each button is labeled with its event name
+- Supports events with or without values
+
+**Example:**
+```typescript
+const events: EmittedEvent[] = [
+  { name: 'save', value: { id: 1 } },
+  { name: 'cancel' },
+  { name: 'delete', value: { id: 1 } }
+];
+const stub = getMultiEmittingStubWithProps('MyComponent', events, 'title');
+```
+
+---
+
+### `getExposedValidateStub(componentName: string, isValid: boolean = true)`
+
+Creates a stub component with an exposed `validate()` method for testing form validation.
+
+**Parameters:**
+- `componentName` (string): The name of the component to stub
+- `isValid` (boolean, optional): Whether validation should pass (default: `true`)
+
+**Returns:** An object with a single key (the component name) containing the stub configuration
+
+**Features:**
+- Exposes a `validate()` method that returns `{ valid: boolean, errors: [] }`
+- Updates the rendered output to show `{componentName}-stub-validated-true` or `false`
+- Includes `resetValidation()` method
+
+**Example:**
+```typescript
+const stub = getExposedValidateStub('InputComponent', true);
+// After calling validate(): renders "InputComponent-stub-validated-true"
+```
+
+---
+
+### `getExposedValidateStubWithProps(componentName: string, isValid: boolean = true, ...props: (string | object)[])`
+
+Creates a stub component that combines validation testing with props display.
+
+**Parameters:**
+- `componentName` (string): The name of the component to stub
+- `isValid` (boolean, optional): Whether validation should pass (default: `true`)
+- `...props` (string | object): The prop names to accept and display
+
+**Returns:** An object with a single key (the component name) containing the stub configuration
+
+**Features:**
+- Combines functionality of `getExposedValidateStub` and `getStubWithProps`
+- Displays props in testable format
+- Exposes validation methods
+
+**Example:**
+```typescript
+const stub = getExposedValidateStubWithProps('InputComponent', true, 'value', 'label');
+```
+
+---
+
+### `getTemplateComponentForExposedFunction(componentAlias: Component, exposedFn: string, props?: object)`
+
+Creates a wrapper component that calls an exposed function on a child component.
+
+**Parameters:**
+- `componentAlias` (Component): The actual component to wrap
+- `exposedFn` (string): The name of the exposed function to call
+- `props` (object, optional): Props to pass to the child component
+
+**Returns:** A Vue component configuration that wraps the provided component
+
+**Features:**
+- Creates a button that triggers the exposed function
+- Button is labeled with the function name
+- Passes props to the child component
+- Useful for testing components that use `expose()` or `defineExpose()`
+
+**Example:**
+```typescript
+const wrapper = getTemplateComponentForExposedFunction(ChildComponent, 'reset', { value: 'test' });
+// Renders ChildComponent with a button that calls reset() when clicked
+```
+
 ## License
 
 MIT
