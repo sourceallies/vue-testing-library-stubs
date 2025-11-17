@@ -55,11 +55,7 @@ The compiled output will be in the `dist/` directory.
 ```
 src/
 ├── index.ts              # Main entry point with stub functions
-├── types.ts              # TypeScript type definitions
-├── utils/
-│   └── rules.ts         # Validation rules
-└── generators/
-    └── miscGenerators.ts # Test data generators
+└── types.ts              # TypeScript type definitions
 ```
 
 ## Usage
