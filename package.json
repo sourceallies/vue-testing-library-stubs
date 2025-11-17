@@ -1,5 +1,5 @@
 {
-  "name": "vue-testing-library-stubs",
+  "name": "@sourceallies/vue-testing-library-stubs",
   "version": "1.0.0",
   "description": "Contains stubbing functions for Vue components to unit test components without requiring the full component to be loaded.",
   "type": "module",
