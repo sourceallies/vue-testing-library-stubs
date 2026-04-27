@@ -147,6 +147,15 @@ export type EmittedEvent = {
     value?: any;
 };
 
+/*
+Usage:
+const stubs = { ...getMultiEmittingStubWithProps('{componentName}', [{ name: '{event1}', value: 'value1' }, { name: '{event2}' }])};
+const stubs = { ...getMultiEmittingStubWithProps('{componentName}', [{ name: '{event1}', value: 'value1' }], 'property1', 'property2')};
+
+const button = screen.getByRole('button', { name: '{event1}' });
+const component = screen.getByText('{componentName}-stub');
+const propWithValue = screen.getByText('{propertyName}-{expectedValue}');
+*/
 export const getMultiEmittingStubWithProps = (
     componentName: string,
     events: EmittedEvent[],
@@ -171,6 +180,12 @@ export const getMultiEmittingStubWithProps = (
             };
         },
         props,
+        methods: {
+            // eslint-disable-next-line require-await
+            validate: async (): Promise<Validated> => ({ valid: true, errors: [] }),
+            reset: () => {},
+            resetValidation: () => {},
+        },
     };
 
     return stub;
