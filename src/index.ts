@@ -110,14 +110,21 @@ export function getStub (arg: string | StubOptions): Record<string, any> {
         ? '<button v-for="event in events" @click="$emit(event.name, ...event.args)">{{event.name}}</button>'
         : '';
 
-    const methods: Record<string, any> = { };
+    // Form lifecycle no-ops are always exposed (matching the legacy emitting stubs)
+    // so parents that call child.reset()/validate() over a ref don't blow up.
+    const methods: Record<string, any> = {
+        // eslint-disable-next-line require-await
+        validate: async (): Promise<Validated> => ({ valid: true, errors: [] }),
+        reset: () => {},
+        resetValidation: () => {},
+    };
     if (validateEnabled) {
+        // Upgrade validate to track calls and honour isValid.
         // eslint-disable-next-line require-await
         methods.validate = async function (): Promise<Validated> {
             (this as any).$data.validateCalled = true;
             return { valid: isValid, errors: [] };
         };
-        methods.resetValidation = () => {};
     }
     // Spies are merged last so callers can override any default method.
     Object.assign(methods, spies);

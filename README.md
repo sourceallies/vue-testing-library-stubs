@@ -325,7 +325,7 @@ expect(screen.getByText(/InputComponent-stub-validated-true/)).toBeVisible();
 
 ### Spies
 
-Pass your own mock functions via `spies` to assert the parent invoked a child method. The library stays test-framework agnostic — you provide the spy (`vi.fn()`, `jest.fn()`, etc.) and keep a reference to assert on it. Spies are merged last, so they can also override the default `validate`.
+Pass your own mock functions via `spies` to assert the parent invoked a child method. The library stays test-framework agnostic — you provide the spy (`vi.fn()`, `jest.fn()`, etc.) and keep a reference to assert on it. Spies are merged last, so they can also override the always-present no-op methods (`validate`, `reset`, `resetValidation`).
 
 ```typescript
 import { mount } from '@vue/test-utils';
@@ -424,8 +424,9 @@ type EmittedEvent = {
 - Renders `{componentName}-stub` and exposes the stub under the key `componentName` with name `{componentName}-stub`.
 - `props`: rendered as `propName-value`. Hyphenated names are converted to camelCase, objects/arrays are JSON-stringified, arrays of functions show the function names, and `undefined` props are not rendered.
 - `events`: each event renders a button labelled with its name. `values` emits multiple args, `value` emits one, neither emits none.
-- `validate`: exposes a tracking `validate()` returning `{ valid, errors: [] }` plus `resetValidation()`, and renders `{componentName}-stub-validated-{true|false}`.
-- `spies`: merged into `methods` (after `validate`, so a spy can override it).
+- Every object-form stub always exposes no-op `validate()` (resolves `{ valid: true, errors: [] }`), `reset()`, and `resetValidation()` methods, so a parent that calls these over a `ref` won't error.
+- `validate`: upgrades the no-op `validate()` to track calls (honouring `isValid`) and renders `{componentName}-stub-validated-{true|false}`.
+- `spies`: merged into `methods` last, so a spy can override any default method (including `validate`/`reset`/`resetValidation`).
 
 **Examples:**
 ```typescript

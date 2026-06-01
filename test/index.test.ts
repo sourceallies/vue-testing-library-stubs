@@ -550,6 +550,24 @@ describe('getStub (object form)', () => {
         const stub = getStub({ componentName: 'MyComponent' });
         expect(stub.MyComponent.props).toEqual([]);
     });
+
+    it('should always expose no-op validate, reset and resetValidation', async () => {
+        const stub = getStub({ componentName: 'MyComponent' });
+
+        expect(stub.MyComponent.methods.validate).toBeDefined();
+        expect(stub.MyComponent.methods.reset).toBeDefined();
+        expect(stub.MyComponent.methods.resetValidation).toBeDefined();
+
+        const result = await stub.MyComponent.methods.validate();
+        expect(result).toEqual({ valid: true, errors: [] });
+    });
+
+    it('should not error when a parent calls reset over a ref', () => {
+        const stub = getStub({ componentName: 'MyComponent', events: [{ name: 'save' }] });
+        const wrapper = mount(stub.MyComponent);
+
+        expect(() => (wrapper.vm as any).reset()).not.toThrow();
+    });
 });
 
 describe('Edge cases and integration', () => {
