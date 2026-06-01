@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import {
     getStub,
@@ -425,6 +425,130 @@ describe('getTemplateComponentForExposedFunction', () => {
         const wrapper = mount(wrapperComponent);
 
         expect(wrapper.exists()).toBe(true);
+    });
+});
+
+describe('getStub (object form)', () => {
+    it('should create a basic stub from options', () => {
+        const stub = getStub({ componentName: 'MyComponent' });
+
+        expect(stub).toHaveProperty('MyComponent');
+        expect(stub.MyComponent.name).toBe('MyComponent-stub');
+
+        const wrapper = mount(stub.MyComponent);
+        expect(wrapper.text()).toContain('MyComponent-stub');
+    });
+
+    it('should render props', () => {
+        const stub = getStub({ componentName: 'MyComponent', props: ['title', 'count'] });
+        expect(stub.MyComponent.props).toEqual(['title', 'count']);
+
+        const wrapper = mount(stub.MyComponent, { props: { title: 'Hello', count: 42 } });
+        expect(wrapper.text()).toContain('title-Hello');
+        expect(wrapper.text()).toContain('count-42');
+    });
+
+    it('should emit a single event with a value', async () => {
+        const stub = getStub({
+            componentName: 'MyComponent',
+            events: [{ name: 'save', value: { id: 123 } }],
+        });
+        const wrapper = mount(stub.MyComponent);
+
+        await wrapper.find('button').trigger('click');
+        expect(wrapper.emitted('save')![0]).toEqual([{ id: 123 }]);
+    });
+
+    it('should emit an event with multiple values', async () => {
+        const stub = getStub({
+            componentName: 'MyComponent',
+            events: [{ name: 'update', values: ['a', 42, { k: 'v' }] }],
+        });
+        const wrapper = mount(stub.MyComponent);
+
+        await wrapper.find('button').trigger('click');
+        expect(wrapper.emitted('update')![0]).toEqual(['a', 42, { k: 'v' }]);
+    });
+
+    it('should emit no args for a valueless event', async () => {
+        const stub = getStub({ componentName: 'MyComponent', events: [{ name: 'click' }] });
+        const wrapper = mount(stub.MyComponent);
+
+        await wrapper.find('button').trigger('click');
+        expect(wrapper.emitted('click')![0]).toEqual([]);
+    });
+
+    it('should render a button per event', async () => {
+        const stub = getStub({
+            componentName: 'MyComponent',
+            events: [{ name: 'save', value: 1 }, { name: 'cancel' }, { name: 'delete' }],
+        });
+        const wrapper = mount(stub.MyComponent);
+
+        const buttons = wrapper.findAll('button');
+        expect(buttons).toHaveLength(3);
+        await buttons[1].trigger('click');
+        expect(wrapper.emitted('cancel')![0]).toEqual([]);
+    });
+
+    it('should expose a tracking validate method (valid by default)', async () => {
+        const stub = getStub({ componentName: 'MyComponent', validate: true });
+        const wrapper = mount(stub.MyComponent);
+
+        expect(wrapper.text()).toContain('MyComponent-stub-validated-false');
+
+        const result = await (wrapper.vm as any).validate();
+        await wrapper.vm.$nextTick();
+
+        expect(result).toEqual({ valid: true, errors: [] });
+        expect(wrapper.text()).toContain('MyComponent-stub-validated-true');
+    });
+
+    it('should validate as invalid when isValid is false', async () => {
+        const stub = getStub({ componentName: 'MyComponent', validate: { isValid: false } });
+        const wrapper = mount(stub.MyComponent);
+
+        const result = await (wrapper.vm as any).validate();
+        expect(result).toEqual({ valid: false, errors: [] });
+    });
+
+    it('should wire caller-supplied spies into methods', async () => {
+        const reset = vi.fn();
+        const stub = getStub({ componentName: 'MyComponent', spies: { reset } });
+        const wrapper = mount(stub.MyComponent);
+
+        (wrapper.vm as any).reset('arg');
+        expect(reset).toHaveBeenCalledWith('arg');
+    });
+
+    it('should let spies override default validate', async () => {
+        const validate = vi.fn();
+        const stub = getStub({ componentName: 'MyComponent', validate: true, spies: { validate } });
+        const wrapper = mount(stub.MyComponent);
+
+        (wrapper.vm as any).validate();
+        expect(validate).toHaveBeenCalled();
+    });
+
+    it('should combine props, events and validate together', async () => {
+        const stub = getStub({
+            componentName: 'MyComponent',
+            props: ['title'],
+            events: [{ name: 'save', value: 'data' }],
+            validate: true,
+        });
+        const wrapper = mount(stub.MyComponent, { props: { title: 'Combined' } });
+
+        expect(wrapper.text()).toContain('title-Combined');
+        expect(wrapper.text()).toContain('MyComponent-stub-validated-false');
+
+        await wrapper.find('button').trigger('click');
+        expect(wrapper.emitted('save')![0]).toEqual(['data']);
+    });
+
+    it('should default props to an empty array when omitted', () => {
+        const stub = getStub({ componentName: 'MyComponent' });
+        expect(stub.MyComponent.props).toEqual([]);
     });
 });
 
