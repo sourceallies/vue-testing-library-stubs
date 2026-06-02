@@ -31,7 +31,7 @@ This project is written in TypeScript.
 
 ### Prerequisites
 
-- Node.js >= 18.0.0
+- Node.js >= 20.0.0
 - npm
 
 ### Setup
@@ -86,7 +86,21 @@ src/
 
 ## Usage
 
-This library provides various stub components for testing Vue applications with `@vue/test-utils` or `@testing-library/vue`.
+The primary API is **`getStub`**, a single function that takes an options object describing everything a stub needs — props, emitted events, exposed validation, and method spies. One shape replaces the older family of `getStubWithProps` / `getEmittingStub` / `getExposedValidateStub` helpers (those still work but are [deprecated](#deprecated-apis)).
+
+```typescript
+import { getStub, type StubOptions } from '@sourceallies/vue-testing-library-stubs';
+```
+
+`getStub` accepts either a component name string (a shorthand for the simplest stub) or a `StubOptions` object:
+
+| Option | Type | Description |
+|---|---|---|
+| `componentName` | `string` | **Required.** The name of the component to stub. |
+| `props` | `(string \| object)[]` | Prop names to accept and render as `propName-value`. |
+| `events` | `EmittedEvent[]` | Events the stub can emit; each renders a button labelled with its name. |
+| `validate` | `boolean \| { isValid?: boolean }` | Exposes a tracking `validate()` (and `resetValidation()`). `true` validates as valid; `{ isValid: false }` validates as invalid. |
+| `spies` | `Record<string, Function>` | Caller-supplied mock functions merged into the stub's `methods`. |
 
 ### Basic Stub
 
@@ -101,7 +115,7 @@ import { getStub } from '@sourceallies/vue-testing-library-stubs';
 const wrapper = mount(MyParentComponent, {
   global: {
     stubs: {
-      ...getStub('ChildComponent')
+      ...getStub({ componentName: 'ChildComponent' })
     }
   }
 });
@@ -119,7 +133,7 @@ import { getStub } from '@sourceallies/vue-testing-library-stubs';
 render(MyParentComponent, {
   global: {
     stubs: {
-      ...getStub('ChildComponent')
+      ...getStub({ componentName: 'ChildComponent' })
     }
   }
 });
@@ -128,20 +142,22 @@ render(MyParentComponent, {
 expect(screen.getByText('ChildComponent-stub')).toBeVisible();
 ```
 
+> **Shorthand:** `getStub('ChildComponent')` (passing just the name string) is equivalent to `getStub({ componentName: 'ChildComponent' })`.
+
 ### Stub With Props
 
-Test components that pass props to child components:
+Test components that pass props to child components. Props are rendered as `propName-value`; objects/arrays are JSON-stringified, and hyphenated names are converted to camelCase.
 
 **Using @vue/test-utils:**
 
 ```typescript
 import { mount } from '@vue/test-utils';
-import { getStubWithProps } from '@sourceallies/vue-testing-library-stubs';
+import { getStub } from '@sourceallies/vue-testing-library-stubs';
 
 const wrapper = mount(MyParentComponent, {
   global: {
     stubs: {
-      ...getStubWithProps('ChildComponent', 'title', 'count', 'config')
+      ...getStub({ componentName: 'ChildComponent', props: ['title', 'count', 'config'] })
     }
   }
 });
@@ -155,44 +171,44 @@ expect(wrapper.text()).toContain('count-42');
 
 ```typescript
 import { render, screen } from '@testing-library/vue';
-import { getStubWithProps } from '@sourceallies/vue-testing-library-stubs';
+import { getStub } from '@sourceallies/vue-testing-library-stubs';
 
 render(MyParentComponent, {
   global: {
     stubs: {
-      ...getStubWithProps('ChildComponent', 'title', 'count', 'config')
+      ...getStub({ componentName: 'ChildComponent', props: ['title', 'count', 'config'] })
     }
   }
 });
 
-// Verify props are displayed (automatically converts to {propName}-{value})
 expect(screen.getByText(/title-Hello/)).toBeVisible();
 expect(screen.getByText(/count-42/)).toBeVisible();
 ```
 
 ### Stub With Event Emitters
 
-Test components that listen to child component events:
+Each entry in `events` renders a button labelled with the event name. Use `value` to emit a single payload, or `values` to emit multiple arguments. Omit both to emit no arguments.
 
 **Using @vue/test-utils:**
 
 ```typescript
 import { mount } from '@vue/test-utils';
-import { getEmittingStub } from '@sourceallies/vue-testing-library-stubs';
+import { getStub } from '@sourceallies/vue-testing-library-stubs';
 
 const wrapper = mount(MyParentComponent, {
   global: {
     stubs: {
-      ...getEmittingStub('ChildComponent', 'save', { id: 123 })
+      ...getStub({
+        componentName: 'ChildComponent',
+        events: [{ name: 'save', value: { id: 123 } }]
+      })
     }
   }
 });
 
 // Trigger the event by finding the button with text 'save'
-const button = wrapper.find('button'); // Button text is 'save'
-await button.trigger('click');
+await wrapper.find('button').trigger('click');
 
-// Verify parent component handled the event
 expect(wrapper.emitted('save')).toBeTruthy();
 expect(wrapper.emitted('save')?.[0]).toEqual([{ id: 123 }]);
 ```
@@ -202,180 +218,91 @@ expect(wrapper.emitted('save')?.[0]).toEqual([{ id: 123 }]);
 ```typescript
 import { render, screen } from '@testing-library/vue';
 import userEvent from '@testing-library/user-event';
-import { getEmittingStub } from '@sourceallies/vue-testing-library-stubs';
+import { getStub } from '@sourceallies/vue-testing-library-stubs';
 
 const { emitted } = render(MyParentComponent, {
   global: {
     stubs: {
-      ...getEmittingStub('ChildComponent', 'save', { id: 123 })
+      ...getStub({
+        componentName: 'ChildComponent',
+        events: [{ name: 'save', value: { id: 123 } }]
+      })
     }
   }
 });
 
-// Trigger the event
 const button = screen.getByRole('button', { name: 'save' });
 await userEvent.click(button);
 
-// Verify parent component handled the event with the correct value
 expect(emitted()).toHaveProperty('save');
 expect(emitted().save[0]).toEqual([{ id: 123 }]);
 ```
 
+#### Multiple events and multiple values
+
+```typescript
+const stubs = {
+  ...getStub({
+    componentName: 'ChildComponent',
+    events: [
+      { name: 'save', value: { id: 1 } },     // $emit('save', { id: 1 })
+      { name: 'cancel' },                      // $emit('cancel')
+      { name: 'update', values: ['a', 42] },   // $emit('update', 'a', 42)
+    ]
+  })
+};
+
+// Each event gets its own button, labelled with its name
+const saveButton = screen.getByRole('button', { name: 'save' });
+const updateButton = screen.getByRole('button', { name: 'update' });
+await userEvent.click(updateButton);
+
+expect(emitted().update[0]).toEqual(['a', 42]);
+```
+
 ### Stub With Props and Events
 
-Combine props and event emission:
-
-**Using @vue/test-utils:**
+Combine any options in a single call:
 
 ```typescript
-import { mount } from '@vue/test-utils';
-import { getEmittingStubWithProps } from '@sourceallies/vue-testing-library-stubs';
-
 const wrapper = mount(MyParentComponent, {
   global: {
     stubs: {
-      ...getEmittingStubWithProps(
-        'ChildComponent',
-        'update',
-        [{ newValue: 'test' }],
-        'title',
-        'isActive'
-      )
+      ...getStub({
+        componentName: 'ChildComponent',
+        props: ['title', 'isActive'],
+        events: [{ name: 'update', value: { newValue: 'test' } }]
+      })
     }
   }
 });
 
-// Trigger the event
-const button = wrapper.find('button'); // Button text is 'update'
-await button.trigger('click');
+expect(wrapper.text()).toContain('title-Hello');
 
-// Verify the event was emitted with the correct value
-expect(wrapper.emitted('update')).toBeTruthy();
+await wrapper.find('button').trigger('click');
 expect(wrapper.emitted('update')?.[0]).toEqual([{ newValue: 'test' }]);
-```
-
-**Using @testing-library/vue:**
-
-```typescript
-import { render, screen } from '@testing-library/vue';
-import userEvent from '@testing-library/user-event';
-import { getEmittingStubWithProps } from '@sourceallies/vue-testing-library-stubs';
-
-const { emitted } = render(MyParentComponent, {
-  global: {
-    stubs: {
-      ...getEmittingStubWithProps(
-        'ChildComponent',
-        'update',
-        [{ newValue: 'test' }],
-        'title',
-        'isActive'
-      )
-    }
-  }
-});
-
-// Verify both stub and props are rendered
-expect(screen.getByText('ChildComponent-stub')).toBeVisible();
-
-// Trigger the event
-const button = screen.getByRole('button', { name: 'update' });
-await userEvent.click(button);
-
-// Verify the event was emitted with the correct value
-expect(emitted()).toHaveProperty('update');
-expect(emitted().update[0]).toEqual([{ newValue: 'test' }]);
-```
-
-### Multiple Events Stub
-
-Test components with multiple event handlers:
-
-**Using @vue/test-utils:**
-
-```typescript
-import { mount } from '@vue/test-utils';
-import { getMultiEmittingStubWithProps, type EmittedEvent } from '@sourceallies/vue-testing-library-stubs';
-
-const events: EmittedEvent[] = [
-  { name: 'save', value: { id: 1 } },
-  { name: 'cancel' },
-  { name: 'delete', value: { id: 1 } }
-];
-
-const wrapper = mount(MyParentComponent, {
-  global: {
-    stubs: {
-      ...getMultiEmittingStubWithProps('ChildComponent', events, 'title', 'status')
-    }
-  }
-});
-
-// Each event gets its own button
-const buttons = wrapper.findAll('button');
-await buttons[0].trigger('click'); // Triggers 'save'
-await buttons[1].trigger('click'); // Triggers 'cancel'
-
-// Verify events were emitted with correct values
-expect(wrapper.emitted('save')).toBeTruthy();
-expect(wrapper.emitted('save')?.[0]).toEqual([{ id: 1 }]);
-expect(wrapper.emitted('cancel')).toBeTruthy();
-expect(wrapper.emitted('cancel')?.[0]).toEqual([undefined]);
-```
-
-**Using @testing-library/vue:**
-
-```typescript
-import { render, screen } from '@testing-library/vue';
-import userEvent from '@testing-library/user-event';
-import { getMultiEmittingStubWithProps, type EmittedEvent } from '@sourceallies/vue-testing-library-stubs';
-
-const events: EmittedEvent[] = [
-  { name: 'save', value: { id: 1 } },
-  { name: 'cancel' },
-  { name: 'delete', value: { id: 1 } }
-];
-
-const { emitted } = render(MyParentComponent, {
-  global: {
-    stubs: {
-      ...getMultiEmittingStubWithProps('ChildComponent', events, 'title', 'status')
-    }
-  }
-});
-
-// Each event gets its own button
-const saveButton = screen.getByRole('button', { name: 'save' });
-const cancelButton = screen.getByRole('button', { name: 'cancel' });
-await userEvent.click(saveButton);
-await userEvent.click(cancelButton);
-
-// Verify events were emitted with correct values
-expect(emitted()).toHaveProperty('save');
-expect(emitted().save[0]).toEqual([{ id: 1 }]);
-expect(emitted()).toHaveProperty('cancel');
-expect(emitted().cancel[0]).toEqual([undefined]);
 ```
 
 ### Validation Stubs
 
-Test parent components that call child validation methods:
+Set `validate` to expose a `validate()` method that tracks whether it was called and renders `{componentName}-stub-validated-{true|false}`. Pass `{ isValid: false }` to simulate a failing validation.
 
 **Using @vue/test-utils:**
 
 ```typescript
 import { mount } from '@vue/test-utils';
-import { getExposedValidateStub } from '@sourceallies/vue-testing-library-stubs';
+import { getStub } from '@sourceallies/vue-testing-library-stubs';
 
 const wrapper = mount(MyFormComponent, {
   global: {
     stubs: {
-      ...getExposedValidateStub('InputComponent', true) // true = validation passes
+      ...getStub({ componentName: 'InputComponent', validate: true }) // valid
+      // ...getStub({ componentName: 'InputComponent', validate: { isValid: false } }) // invalid
     }
   }
 });
 
-// After calling validate on the child component
+// After the parent calls validate() on the child component
 expect(wrapper.text()).toContain('InputComponent-stub-validated-true');
 ```
 
@@ -383,23 +310,45 @@ expect(wrapper.text()).toContain('InputComponent-stub-validated-true');
 
 ```typescript
 import { render, screen } from '@testing-library/vue';
-import { getExposedValidateStub } from '@sourceallies/vue-testing-library-stubs';
+import { getStub } from '@sourceallies/vue-testing-library-stubs';
 
 render(MyFormComponent, {
   global: {
     stubs: {
-      ...getExposedValidateStub('InputComponent', true) // true = validation passes
+      ...getStub({ componentName: 'InputComponent', validate: true })
     }
   }
 });
 
-// After calling validate on the child component
 expect(screen.getByText(/InputComponent-stub-validated-true/)).toBeVisible();
+```
+
+### Spies
+
+Pass your own mock functions via `spies` to assert the parent invoked a child method. The library stays test-framework agnostic — you provide the spy (`vi.fn()`, `jest.fn()`, etc.) and keep a reference to assert on it. Spies are merged last, so they can also override the always-present no-op methods (`validate`, `reset`, `resetValidation`).
+
+```typescript
+import { mount } from '@vue/test-utils';
+import { vi } from 'vitest';
+import { getStub } from '@sourceallies/vue-testing-library-stubs';
+
+const reset = vi.fn();
+
+const wrapper = mount(MyParentComponent, {
+  global: {
+    stubs: {
+      ...getStub({ componentName: 'ChildComponent', spies: { reset } })
+    }
+  }
+});
+
+// ...after the parent calls the child's reset()
+expect(reset).toHaveBeenCalled();
 ```
 
 ### Template for Exposed Functions
 
-Test components that use child component's exposed functions:
+Test components that use a child component's exposed functions. Unlike `getStub`, this wraps the **real** component (not a string-named stub), so it is not superseded by `getStub`.
 
 **Using @vue/test-utils:**
 
@@ -449,174 +398,48 @@ await userEvent.click(button);
 
 ## API Reference
 
-### `getStub(componentName: string)`
+### `getStub(componentName: string)` / `getStub(options: StubOptions)`
 
-Creates a basic stub component with no props or events.
+Creates a stub component. Call it with a component name string for the simplest stub, or with a `StubOptions` object to configure props, events, validation, and spies.
 
-**Parameters:**
-- `componentName` (string): The name of the component to stub
+**`StubOptions`:**
 
-**Returns:** An object with a single key (the component name) containing the stub configuration
-
-**Example:**
 ```typescript
-const stub = getStub('MyComponent');
-// Renders: <div>MyComponent-stub</div>
-```
+interface StubOptions {
+  componentName: string;
+  props?: (string | object)[];
+  events?: EmittedEvent[];
+  validate?: boolean | { isValid?: boolean };
+  spies?: Record<string, (...args: any[]) => any>;
+}
 
----
-
-### `getStubWithProps(componentName: string, ...props: (string | object)[])`
-
-Creates a stub component that displays its props in a testable format.
-
-**Parameters:**
-- `componentName` (string): The name of the component to stub
-- `...props` (string | object): The prop names to accept and display
-
-**Returns:** An object with a single key (the component name) containing the stub configuration
-
-**Features:**
-- Automatically converts hyphenated prop names to camelCase
-- Displays props as `propName-value` in the rendered output
-- Handles object props by JSON stringifying them
-- Shows function names for array of functions (useful for validation rules)
-
-**Example:**
-```typescript
-const stub = getStubWithProps('MyComponent', 'title', 'count', 'is-active');
-// Renders props as: title-Hello, count-42, isActive-true
-```
-
----
-
-### `getEmittingStub(componentName: string, emittedEvent: string, ...emittedValues: any[])`
-
-Creates a stub component that emits a single event when a button is clicked.
-
-**Parameters:**
-- `componentName` (string): The name of the component to stub
-- `emittedEvent` (string): The name of the event to emit
-- `...emittedValues` (any[]): The values to emit with the event
-
-**Returns:** An object with a single key (the component name) containing the stub configuration
-
-**Features:**
-- Creates a button with the event name as its label
-- Emits the specified event with the provided values when clicked
-- Includes `validate()`, `reset()`, and `resetValidation()` methods that return valid results
-
-**Example:**
-```typescript
-const stub = getEmittingStub('MyComponent', 'save', { id: 123 });
-// Button click emits: 'save' event with { id: 123 }
-```
-
----
-
-### `getEmittingStubWithProps(componentName: string, emittedEvent: string, emittedValues: any[], ...props: (string | object)[])`
-
-Creates a stub component that combines props display and event emission.
-
-**Parameters:**
-- `componentName` (string): The name of the component to stub
-- `emittedEvent` (string): The name of the event to emit
-- `emittedValues` (any[]): Array of values to emit with the event
-- `...props` (string | object): The prop names to accept and display
-
-**Returns:** An object with a single key (the component name) containing the stub configuration
-
-**Features:**
-- Combines functionality of `getStubWithProps` and `getEmittingStub`
-- Displays props in testable format
-- Emits events with specified values
-- Includes validation methods
-
-**Example:**
-```typescript
-const stub = getEmittingStubWithProps('MyComponent', 'update', [{ newValue: 'test' }], 'title', 'isActive');
-```
-
----
-
-### `getMultiEmittingStubWithProps(componentName: string, events: EmittedEvent[], ...props: (string | object)[])`
-
-Creates a stub component that can emit multiple different events.
-
-**Parameters:**
-- `componentName` (string): The name of the component to stub
-- `events` (EmittedEvent[]): Array of event configurations with `name` and optional `value`
-- `...props` (string | object): The prop names to accept and display
-
-**Type Definitions:**
-```typescript
 type EmittedEvent = {
   name: string;
-  value?: any;
+  value?: any;      // single value: $emit(name, value)
+  values?: any[];   // multiple values: $emit(name, ...values) — takes precedence over `value`
 };
 ```
 
-**Returns:** An object with a single key (the component name) containing the stub configuration
+**Behavior:**
+- Renders `{componentName}-stub` and exposes the stub under the key `componentName` with name `{componentName}-stub`.
+- `props`: rendered as `propName-value`. Hyphenated names are converted to camelCase, objects/arrays are JSON-stringified, arrays of functions show the function names, and `undefined` props are not rendered.
+- `events`: each event renders a button labelled with its name. `values` emits multiple args, `value` emits one, neither emits none.
+- Every object-form stub always exposes no-op `validate()` (resolves `{ valid: true, errors: [] }`), `reset()`, and `resetValidation()` methods, so a parent that calls these over a `ref` won't error.
+- `validate`: upgrades the no-op `validate()` to track calls (honouring `isValid`) and renders `{componentName}-stub-validated-{true|false}`.
+- `spies`: merged into `methods` last, so a spy can override any default method (including `validate`/`reset`/`resetValidation`).
 
-**Features:**
-- Creates a separate button for each event
-- Each button is labeled with its event name
-- Supports events with or without values
-
-**Example:**
+**Examples:**
 ```typescript
-const events: EmittedEvent[] = [
-  { name: 'save', value: { id: 1 } },
-  { name: 'cancel' },
-  { name: 'delete', value: { id: 1 } }
-];
-const stub = getMultiEmittingStubWithProps('MyComponent', events, 'title');
-```
-
----
-
-### `getExposedValidateStub(componentName: string, isValid: boolean = true)`
-
-Creates a stub component with an exposed `validate()` method for testing form validation.
-
-**Parameters:**
-- `componentName` (string): The name of the component to stub
-- `isValid` (boolean, optional): Whether validation should pass (default: `true`)
-
-**Returns:** An object with a single key (the component name) containing the stub configuration
-
-**Features:**
-- Exposes a `validate()` method that returns `{ valid: boolean, errors: [] }`
-- Updates the rendered output to show `{componentName}-stub-validated-true` or `false`
-- Includes `resetValidation()` method
-
-**Example:**
-```typescript
-const stub = getExposedValidateStub('InputComponent', true);
-// After calling validate(): renders "InputComponent-stub-validated-true"
-```
-
----
-
-### `getExposedValidateStubWithProps(componentName: string, isValid: boolean = true, ...props: (string | object)[])`
-
-Creates a stub component that combines validation testing with props display.
-
-**Parameters:**
-- `componentName` (string): The name of the component to stub
-- `isValid` (boolean, optional): Whether validation should pass (default: `true`)
-- `...props` (string | object): The prop names to accept and display
-
-**Returns:** An object with a single key (the component name) containing the stub configuration
-
-**Features:**
-- Combines functionality of `getExposedValidateStub` and `getStubWithProps`
-- Displays props in testable format
-- Exposes validation methods
-
-**Example:**
-```typescript
-const stub = getExposedValidateStubWithProps('InputComponent', true, 'value', 'label');
+getStub('MyComponent');
+getStub({ componentName: 'MyComponent', props: ['title', 'count'] });
+getStub({ componentName: 'MyComponent', events: [{ name: 'save', value: { id: 1 } }] });
+getStub({
+  componentName: 'MyComponent',
+  props: ['title'],
+  events: [{ name: 'save' }, { name: 'cancel' }],
+  validate: { isValid: false },
+  spies: { reset: vi.fn() },
+});
 ```
 
 ---
@@ -642,6 +465,166 @@ Creates a wrapper component that calls an exposed function on a child component.
 ```typescript
 const wrapper = getTemplateComponentForExposedFunction(ChildComponent, 'reset', { value: 'test' });
 // Renders ChildComponent with a button that calls reset() when clicked
+```
+
+## Deprecated APIs
+
+> ⚠️ The functions below remain for backward compatibility but are **superseded by [`getStub`](#getstubcomponentname-string--getstuboptions-stuboptions)**. They are marked `@deprecated` and will show a strikethrough in editors. Prefer the `getStub({ ... })` equivalent shown with each.
+
+### Migration at a glance
+
+| Deprecated call | `getStub` replacement |
+|---|---|
+| `getStub('Name')` | `getStub({ componentName: 'Name' })` *(string form still supported as a shorthand)* |
+| `getStubWithProps('Name', 'a', 'b')` | `getStub({ componentName: 'Name', props: ['a', 'b'] })` |
+| `getEmittingStub('Name', 'save', v1, v2)` | `getStub({ componentName: 'Name', events: [{ name: 'save', values: [v1, v2] }] })` |
+| `getEmittingStubWithProps('Name', 'save', [v1, v2], 'a')` | `getStub({ componentName: 'Name', props: ['a'], events: [{ name: 'save', values: [v1, v2] }] })` |
+| `getMultiEmittingStubWithProps('Name', [{ name: 'save', value: v }], 'a')` | `getStub({ componentName: 'Name', props: ['a'], events: [{ name: 'save', value: v }] })` |
+| `getExposedValidateStub('Name', false)` | `getStub({ componentName: 'Name', validate: { isValid: false } })` |
+| `getExposedValidateStubWithProps('Name', true, 'a')` | `getStub({ componentName: 'Name', props: ['a'], validate: true })` |
+
+> **Emit-args difference:** `getEmittingStub` spreads trailing args (`...emittedValues`), so map those to `values: [...]`. `getMultiEmittingStubWithProps` uses a single `value` per event, which maps directly to `value`. Also note a valueless event emits `[undefined]` in the legacy multi-stub but `[]` in `getStub`.
+
+### `getStubWithProps(componentName: string, ...props: (string | object)[])`
+
+> Replacement: `getStub({ componentName, props: [...] })`
+
+Creates a stub component that displays its props in a testable format.
+
+```typescript
+import { mount } from '@vue/test-utils';
+import { getStubWithProps } from '@sourceallies/vue-testing-library-stubs';
+
+const wrapper = mount(MyParentComponent, {
+  global: {
+    stubs: {
+      ...getStubWithProps('ChildComponent', 'title', 'count', 'config')
+    }
+  }
+});
+
+expect(wrapper.text()).toContain('title-Hello');
+expect(wrapper.text()).toContain('count-42');
+```
+
+---
+
+### `getEmittingStub(componentName: string, emittedEvent: string, ...emittedValues: any[])`
+
+> Replacement: `getStub({ componentName, events: [{ name, values: [...] }] })`
+
+Creates a stub component that emits a single event when a button is clicked.
+
+```typescript
+import { mount } from '@vue/test-utils';
+import { getEmittingStub } from '@sourceallies/vue-testing-library-stubs';
+
+const wrapper = mount(MyParentComponent, {
+  global: {
+    stubs: {
+      ...getEmittingStub('ChildComponent', 'save', { id: 123 })
+    }
+  }
+});
+
+await wrapper.find('button').trigger('click');
+
+expect(wrapper.emitted('save')).toBeTruthy();
+expect(wrapper.emitted('save')?.[0]).toEqual([{ id: 123 }]);
+```
+
+---
+
+### `getEmittingStubWithProps(componentName: string, emittedEvent: string, emittedValues: any[], ...props: (string | object)[])`
+
+> Replacement: `getStub({ componentName, props: [...], events: [{ name, values: [...] }] })`
+
+Creates a stub component that combines props display and event emission.
+
+```typescript
+import { mount } from '@vue/test-utils';
+import { getEmittingStubWithProps } from '@sourceallies/vue-testing-library-stubs';
+
+const wrapper = mount(MyParentComponent, {
+  global: {
+    stubs: {
+      ...getEmittingStubWithProps('ChildComponent', 'update', [{ newValue: 'test' }], 'title', 'isActive')
+    }
+  }
+});
+
+await wrapper.find('button').trigger('click');
+
+expect(wrapper.emitted('update')?.[0]).toEqual([{ newValue: 'test' }]);
+```
+
+---
+
+### `getMultiEmittingStubWithProps(componentName: string, events: EmittedEvent[], ...props: (string | object)[])`
+
+> Replacement: `getStub({ componentName, props: [...], events: [{ name, value }] })`
+
+Creates a stub component that can emit multiple different events.
+
+```typescript
+import { mount } from '@vue/test-utils';
+import { getMultiEmittingStubWithProps, type EmittedEvent } from '@sourceallies/vue-testing-library-stubs';
+
+const events: EmittedEvent[] = [
+  { name: 'save', value: { id: 1 } },
+  { name: 'cancel' },
+  { name: 'delete', value: { id: 1 } }
+];
+
+const wrapper = mount(MyParentComponent, {
+  global: {
+    stubs: {
+      ...getMultiEmittingStubWithProps('ChildComponent', events, 'title', 'status')
+    }
+  }
+});
+
+const buttons = wrapper.findAll('button');
+await buttons[0].trigger('click'); // Triggers 'save'
+
+expect(wrapper.emitted('save')?.[0]).toEqual([{ id: 1 }]);
+```
+
+> **Note:** This legacy function emits `[undefined]` for a valueless event, whereas `getStub` emits `[]` (no arguments). Keep that in mind when migrating assertions.
+
+---
+
+### `getExposedValidateStub(componentName: string, isValid: boolean = true)`
+
+> Replacement: `getStub({ componentName, validate: true })` (or `validate: { isValid: false }`)
+
+Creates a stub component with an exposed `validate()` method for testing form validation.
+
+```typescript
+import { mount } from '@vue/test-utils';
+import { getExposedValidateStub } from '@sourceallies/vue-testing-library-stubs';
+
+const wrapper = mount(MyFormComponent, {
+  global: {
+    stubs: {
+      ...getExposedValidateStub('InputComponent', true) // true = validation passes
+    }
+  }
+});
+
+expect(wrapper.text()).toContain('InputComponent-stub-validated-true');
+```
+
+---
+
+### `getExposedValidateStubWithProps(componentName: string, isValid: boolean = true, ...props: (string | object)[])`
+
+> Replacement: `getStub({ componentName, props: [...], validate: true })`
+
+Creates a stub component that combines validation testing with props display.
+
+```typescript
+const stub = getExposedValidateStubWithProps('InputComponent', true, 'value', 'label');
 ```
 
 ## License

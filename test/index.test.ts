@@ -1,5 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { render, screen } from '@testing-library/vue';
+import userEvent from '@testing-library/user-event';
 import {
     getStub,
     getStubWithProps,
@@ -428,6 +430,147 @@ describe('getTemplateComponentForExposedFunction', () => {
     });
 });
 
+describe('getStub (object form)', () => {
+    it('should create a basic stub from options', () => {
+        const stub = getStub({ componentName: 'MyComponent' });
+
+        expect(stub).toHaveProperty('MyComponent');
+        expect(stub.MyComponent.name).toBe('MyComponent-stub');
+
+        const wrapper = mount(stub.MyComponent);
+        expect(wrapper.text()).toContain('MyComponent-stub');
+    });
+
+    it('should render props', () => {
+        const stub = getStub({ componentName: 'MyComponent', props: ['title', 'count'] });
+        expect(stub.MyComponent.props).toEqual(['title', 'count']);
+
+        const wrapper = mount(stub.MyComponent, { props: { title: 'Hello', count: 42 } });
+        expect(wrapper.text()).toContain('title-Hello');
+        expect(wrapper.text()).toContain('count-42');
+    });
+
+    it('should emit a single event with a value', async () => {
+        const stub = getStub({
+            componentName: 'MyComponent',
+            events: [{ name: 'save', value: { id: 123 } }],
+        });
+        const wrapper = mount(stub.MyComponent);
+
+        await wrapper.find('button').trigger('click');
+        expect(wrapper.emitted('save')![0]).toEqual([{ id: 123 }]);
+    });
+
+    it('should emit an event with multiple values', async () => {
+        const stub = getStub({
+            componentName: 'MyComponent',
+            events: [{ name: 'update', values: ['a', 42, { k: 'v' }] }],
+        });
+        const wrapper = mount(stub.MyComponent);
+
+        await wrapper.find('button').trigger('click');
+        expect(wrapper.emitted('update')![0]).toEqual(['a', 42, { k: 'v' }]);
+    });
+
+    it('should emit no args for a valueless event', async () => {
+        const stub = getStub({ componentName: 'MyComponent', events: [{ name: 'click' }] });
+        const wrapper = mount(stub.MyComponent);
+
+        await wrapper.find('button').trigger('click');
+        expect(wrapper.emitted('click')![0]).toEqual([]);
+    });
+
+    it('should render a button per event', async () => {
+        const stub = getStub({
+            componentName: 'MyComponent',
+            events: [{ name: 'save', value: 1 }, { name: 'cancel' }, { name: 'delete' }],
+        });
+        const wrapper = mount(stub.MyComponent);
+
+        const cancelButton = wrapper.findAll('button').find(b => b.text() === 'cancel')!;
+        await cancelButton.trigger('click');
+        expect(wrapper.emitted('cancel')![0]).toEqual([]);
+    });
+
+    it('should expose a tracking validate method (valid by default)', async () => {
+        const stub = getStub({ componentName: 'MyComponent', validate: true });
+        const wrapper = mount(stub.MyComponent);
+
+        expect(wrapper.text()).toContain('MyComponent-stub-validated-false');
+
+        const result = await (wrapper.vm as any).validate();
+        await wrapper.vm.$nextTick();
+
+        expect(result).toEqual({ valid: true, errors: [] });
+        expect(wrapper.text()).toContain('MyComponent-stub-validated-true');
+    });
+
+    it('should validate as invalid when isValid is false', async () => {
+        const stub = getStub({ componentName: 'MyComponent', validate: { isValid: false } });
+        const wrapper = mount(stub.MyComponent);
+
+        const result = await (wrapper.vm as any).validate();
+        expect(result).toEqual({ valid: false, errors: [] });
+    });
+
+    it('should wire caller-supplied spies into methods', async () => {
+        const reset = vi.fn();
+        const stub = getStub({ componentName: 'MyComponent', spies: { reset } });
+        const wrapper = mount(stub.MyComponent);
+
+        (wrapper.vm as any).reset('arg');
+        expect(reset).toHaveBeenCalledWith('arg');
+    });
+
+    it('should let spies override default validate', async () => {
+        const validate = vi.fn();
+        const stub = getStub({ componentName: 'MyComponent', validate: true, spies: { validate } });
+        const wrapper = mount(stub.MyComponent);
+
+        (wrapper.vm as any).validate();
+        expect(validate).toHaveBeenCalled();
+    });
+
+    it('should combine props, events and validate together', async () => {
+        const stub = getStub({
+            componentName: 'MyComponent',
+            props: ['title'],
+            events: [{ name: 'save', value: 'data' }],
+            validate: true,
+        });
+        const wrapper = mount(stub.MyComponent, { props: { title: 'Combined' } });
+
+        expect(wrapper.text()).toContain('title-Combined');
+        expect(wrapper.text()).toContain('MyComponent-stub-validated-false');
+
+        await wrapper.find('button').trigger('click');
+        expect(wrapper.emitted('save')![0]).toEqual(['data']);
+    });
+
+    it('should default props to an empty array when omitted', () => {
+        const stub = getStub({ componentName: 'MyComponent' });
+        expect(stub.MyComponent.props).toEqual([]);
+    });
+
+    it('should always expose no-op validate, reset and resetValidation', async () => {
+        const stub = getStub({ componentName: 'MyComponent' });
+
+        expect(stub.MyComponent.methods.validate).toBeDefined();
+        expect(stub.MyComponent.methods.reset).toBeDefined();
+        expect(stub.MyComponent.methods.resetValidation).toBeDefined();
+
+        const result = await stub.MyComponent.methods.validate();
+        expect(result).toEqual({ valid: true, errors: [] });
+    });
+
+    it('should not error when a parent calls reset over a ref', () => {
+        const stub = getStub({ componentName: 'MyComponent', events: [{ name: 'save' }] });
+        const wrapper = mount(stub.MyComponent);
+
+        expect(() => (wrapper.vm as any).reset()).not.toThrow();
+    });
+});
+
 describe('Edge cases and integration', () => {
     it('should handle empty props array', () => {
         const stub = getStubWithProps('MyComponent');
@@ -470,5 +613,59 @@ describe('Edge cases and integration', () => {
         const wrapper = mount(stub.MyComponent);
 
         expect(wrapper.findAll('button')).toHaveLength(0);
+    });
+});
+
+// Mirrors the documented @testing-library/vue usage so the dual-library support
+// the README advertises is actually exercised (jest-dom matchers + userEvent + role queries).
+describe('getStub with @testing-library/vue', () => {
+    it('should render a basic stub', () => {
+        const stub = getStub({ componentName: 'ChildComponent' });
+        render(stub.ChildComponent);
+
+        expect(screen.getByText('ChildComponent-stub')).toBeVisible();
+    });
+
+    it('should render props in testable format', () => {
+        const stub = getStub({ componentName: 'ChildComponent', props: ['title', 'count'] });
+        render(stub.ChildComponent, { props: { title: 'Hello', count: 42 } });
+
+        expect(screen.getByText(/title-Hello/)).toBeInTheDocument();
+        expect(screen.getByText(/count-42/)).toBeInTheDocument();
+    });
+
+    it('should emit an event when its button is clicked', async () => {
+        const stub = getStub({
+            componentName: 'ChildComponent',
+            events: [{ name: 'save', value: { id: 123 } }],
+        });
+        const { emitted } = render(stub.ChildComponent);
+
+        await userEvent.click(screen.getByRole('button', { name: 'save' }));
+
+        expect(emitted()).toHaveProperty('save');
+        expect(emitted().save[0]).toEqual([{ id: 123 }]);
+    });
+
+    it('should expose a labelled button per event', async () => {
+        const stub = getStub({
+            componentName: 'ChildComponent',
+            events: [{ name: 'save', value: 1 }, { name: 'cancel' }],
+        });
+        const { emitted } = render(stub.ChildComponent);
+
+        // Each event is addressable by its accessible name — no positional indexing.
+        await userEvent.click(screen.getByRole('button', { name: 'cancel' }));
+
+        expect(emitted()).toHaveProperty('cancel');
+        expect(emitted().cancel[0]).toEqual([]);
+        expect(emitted()).not.toHaveProperty('save');
+    });
+
+    it('should render the initial validation state', () => {
+        const stub = getStub({ componentName: 'ChildComponent', validate: true });
+        render(stub.ChildComponent);
+
+        expect(screen.getByText(/ChildComponent-stub-validated-false/)).toBeVisible();
     });
 });
