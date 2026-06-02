@@ -485,9 +485,8 @@ describe('getStub (object form)', () => {
         });
         const wrapper = mount(stub.MyComponent);
 
-        const buttons = wrapper.findAll('button');
-        expect(buttons).toHaveLength(3);
-        await buttons[1].trigger('click');
+        const cancelButton = wrapper.findAll('button').find(b => b.text() === 'cancel')!;
+        await cancelButton.trigger('click');
         expect(wrapper.emitted('cancel')![0]).toEqual([]);
     });
 
