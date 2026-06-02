@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { render, screen } from '@testing-library/vue';
+import userEvent from '@testing-library/user-event';
 import {
     getStub,
     getStubWithProps,
@@ -611,5 +613,59 @@ describe('Edge cases and integration', () => {
         const wrapper = mount(stub.MyComponent);
 
         expect(wrapper.findAll('button')).toHaveLength(0);
+    });
+});
+
+// Mirrors the documented @testing-library/vue usage so the dual-library support
+// the README advertises is actually exercised (jest-dom matchers + userEvent + role queries).
+describe('getStub with @testing-library/vue', () => {
+    it('should render a basic stub', () => {
+        const stub = getStub({ componentName: 'ChildComponent' });
+        render(stub.ChildComponent);
+
+        expect(screen.getByText('ChildComponent-stub')).toBeVisible();
+    });
+
+    it('should render props in testable format', () => {
+        const stub = getStub({ componentName: 'ChildComponent', props: ['title', 'count'] });
+        render(stub.ChildComponent, { props: { title: 'Hello', count: 42 } });
+
+        expect(screen.getByText(/title-Hello/)).toBeInTheDocument();
+        expect(screen.getByText(/count-42/)).toBeInTheDocument();
+    });
+
+    it('should emit an event when its button is clicked', async () => {
+        const stub = getStub({
+            componentName: 'ChildComponent',
+            events: [{ name: 'save', value: { id: 123 } }],
+        });
+        const { emitted } = render(stub.ChildComponent);
+
+        await userEvent.click(screen.getByRole('button', { name: 'save' }));
+
+        expect(emitted()).toHaveProperty('save');
+        expect(emitted().save[0]).toEqual([{ id: 123 }]);
+    });
+
+    it('should expose a labelled button per event', async () => {
+        const stub = getStub({
+            componentName: 'ChildComponent',
+            events: [{ name: 'save', value: 1 }, { name: 'cancel' }],
+        });
+        const { emitted } = render(stub.ChildComponent);
+
+        // Each event is addressable by its accessible name — no positional indexing.
+        await userEvent.click(screen.getByRole('button', { name: 'cancel' }));
+
+        expect(emitted()).toHaveProperty('cancel');
+        expect(emitted().cancel[0]).toEqual([]);
+        expect(emitted()).not.toHaveProperty('save');
+    });
+
+    it('should render the initial validation state', () => {
+        const stub = getStub({ componentName: 'ChildComponent', validate: true });
+        render(stub.ChildComponent);
+
+        expect(screen.getByText(/ChildComponent-stub-validated-false/)).toBeVisible();
     });
 });
