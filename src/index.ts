@@ -107,7 +107,7 @@ export function getStub (arg: string | StubOptions): Record<string, any> {
         ? `<ul>${propertiesWithValues(...props)}</ul>`
         : '';
     const eventsBlock = events && events.length
-        ? '<button v-for="event in events" @click="$emit(event.name, ...event.args)">{{event.name}}</button>'
+        ? '<button type="button" v-for="event in events" @click="$emit(event.name, ...event.args)">{{event.name}}</button>'
         : '';
 
     // Form lifecycle no-ops are always exposed (matching the legacy emitting stubs)
@@ -197,7 +197,7 @@ export const getEmittingStub = (componentName: string, emittedEvent: string, ...
             <div>
                 ${componentName}-stub
             </div>
-            <button @click="$emit('${emittedEvent}', ...emittedValues)">${emittedEvent}</button>
+            <button type="button" @click="$emit('${emittedEvent}', ...emittedValues)">${emittedEvent}</button>
         </div>
         `,
         data () {
@@ -238,7 +238,7 @@ export const getEmittingStubWithProps = (componentName: string, emittedEvent: st
             <ul>
                 ${propertiesWithValues(...props)}
             </ul>
-            <button @click="$emit('${emittedEvent}', ...emittedValues)">${emittedEvent}</button>
+            <button type="button" @click="$emit('${emittedEvent}', ...emittedValues)">${emittedEvent}</button>
         </div>
         `,
         data () {
@@ -284,7 +284,7 @@ export const getMultiEmittingStubWithProps = (
             <ul>
                 ${propertiesWithValues(...props)}
             </ul>
-            <button v-for="event in events" @click="$emit(event.name, event.value)">{{event.name}}</button>
+            <button type="button" v-for="event in events" @click="$emit(event.name, event.value)">{{event.name}}</button>
         </div>
         `,
         data () {
@@ -397,7 +397,7 @@ export const getTemplateComponentForExposedFunction = (componentAlias: Component
         template: `
             <div>
                 <component-alias ${propIdentifiersForComponentAlias} ref="ref" />
-                <button @click="exposedFn">${exposedFn}</button>
+                <button type="button" @click="exposedFn">${exposedFn}</button>
             </div>
         `,
         components: { componentAlias },
