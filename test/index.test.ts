@@ -669,3 +669,77 @@ describe('getStub with @testing-library/vue', () => {
         expect(screen.getByText(/ChildComponent-stub-validated-false/)).toBeVisible();
     });
 });
+
+describe('generated buttons are type="button"', () => {
+    it('should set type="button" on getStub event buttons', () => {
+        const stub = getStub({
+            componentName: 'ChildComponent',
+            events: [{ name: 'save' }, { name: 'cancel' }],
+        });
+        const wrapper = mount(stub.ChildComponent);
+
+        const buttons = wrapper.findAll('button');
+        expect(buttons).toHaveLength(2);
+        buttons.forEach(button => expect(button.attributes('type')).toBe('button'));
+    });
+
+    it('should set type="button" on getEmittingStub buttons', () => {
+        const stub = getEmittingStub('ChildComponent', 'save');
+        const wrapper = mount(stub.ChildComponent);
+
+        expect(wrapper.find('button').attributes('type')).toBe('button');
+    });
+
+    it('should set type="button" on getEmittingStubWithProps buttons', () => {
+        const stub = getEmittingStubWithProps('ChildComponent', 'save', [], 'title');
+        const wrapper = mount(stub.ChildComponent, { props: { title: 'Hello' } });
+
+        expect(wrapper.find('button').attributes('type')).toBe('button');
+    });
+
+    it('should set type="button" on getMultiEmittingStubWithProps buttons', () => {
+        const events: EmittedEvent[] = [{ name: 'save', value: 1 }, { name: 'cancel', value: 2 }];
+        const stub = getMultiEmittingStubWithProps('ChildComponent', events, 'title');
+        const wrapper = mount(stub.ChildComponent, { props: { title: 'Hello' } });
+
+        const buttons = wrapper.findAll('button');
+        expect(buttons).toHaveLength(2);
+        buttons.forEach(button => expect(button.attributes('type')).toBe('button'));
+    });
+
+    it('should set type="button" on getTemplateComponentForExposedFunction buttons', () => {
+        const mockComponent = defineComponent({
+            name: 'MockComponent',
+            template: '<div>Mock Component</div>',
+            methods: {
+                testMethod() {},
+            },
+        });
+
+        const wrapperComponent = getTemplateComponentForExposedFunction(
+            mockComponent as any,
+            'testMethod'
+        );
+        const wrapper = mount(wrapperComponent);
+
+        expect(wrapper.find('button').attributes('type')).toBe('button');
+    });
+
+    it('should not submit an enclosing form when the event button is clicked', async () => {
+        const onSubmit = vi.fn();
+        const parent = defineComponent({
+            template: '<form @submit="onSubmit"><child-component @save="onSave" /></form>',
+            setup: () => ({ onSubmit, onSave: vi.fn() }),
+        });
+
+        render(parent, {
+            global: {
+                stubs: getStub({ componentName: 'ChildComponent', events: [{ name: 'save' }] }),
+            },
+        });
+
+        await userEvent.click(screen.getByRole('button', { name: 'save' }));
+
+        expect(onSubmit).not.toHaveBeenCalled();
+    });
+});
